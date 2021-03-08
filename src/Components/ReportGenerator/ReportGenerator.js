@@ -6,8 +6,8 @@ import Logo from "../../images/logo.jpg";
 import { ConfigProvider } from "antd";
 import faIR from "antd/es/locale/fa_IR";
 import DatePicker from "react-datepicker2";
-// import "./DatePicker.css";
 import moment from "moment-jalaali";
+import axios from 'axios'
 
 const ReportGenerator = (props) => {
   const [componentSize, setComponentSize] = useState("default");
@@ -16,14 +16,55 @@ const ReportGenerator = (props) => {
   const [reportType, setReportType] = useState("1");
   const formRef = useRef(null);
   const [form] = Form.useForm();
+  const [subscribeIds , setSubscribe] = useState([])
+  const [paymentType , setPayment] = useState([])
+  const [paymentFlag , setPaymentFlag] = useState(false)
   const onFormLayoutChange = ({ size }) => {
     setComponentSize(size);
   };
+  const onSubscribeFetch = () => {
+    axios({
+      method:'get',
+      url:'http://10.16.145.168/api/subscribe/'
+    }).then((response) => {
+      console.log("response for then ",response)
+      let subscribeData = response.data.map(e => {return{label:e.name,value:e.id,key:e.subscribe_no}})
+      console.log("subscribeData ",subscribeData)
+      setSubscribe(subscribeData)
+
+    }
+    ).catch(error => console.log("error",error))
+  }
+  const onPaymentMethod = () => {
+    axios({
+      method:'get',
+      url:'http://192.168.10.10:8000/api/receipt_type/'
+    }).then((response) => {
+      let paymentType = response.data.map(e => {return{label:e.name,value:e.id,key:e.id}})
+      console.log("paymentType ",paymentType)
+      setPayment(paymentType)
+
+    }
+    ).catch(error => console.log("error",error))
+  }
+  const onReportNameselect = (e)=>{
+    console.log("slected",e);
+    e === 'main_jrxml' ? setPaymentFlag(true):setPaymentFlag(false)
+  }
   const reportTypeChanged = (event) => {
     form.resetFields(["date_to", "date_from"]);
     setReportType(event.target.value);
   };
   const onFinish = (value) => {
+    console.log("valuse",value);
+    let temp = ''
+    if(value.subscribeId !== undefined){
+        temp=`&SubscribeNo=${value.subscribeId?.value}`
+    }
+    let temp1 = ''
+    if(value.paymentType !== undefined){
+        temp1=`&paymentType=${value.paymentType?.value}`
+    }
     let submitedObject = { ...value };
     if (value.report_type === "1") {
       delete submitedObject["date_from"];
@@ -49,10 +90,11 @@ const ReportGenerator = (props) => {
       submitedObject = { ...submitedObject, date_type: "3" };
     }
     window.open(
-      `http://10.16.145.167:8080/jasperserver/flow.html?_flowId=viewReportFlow&ParentFolderUri=/reports/interactive&reportUnit=/reports/interactive/${submitedObject.reportName}&standAlone=true&decorate=no&j_username=jasperadmin&j_password=jasperadmin&Date_From=${submitedObject.date_from}&Date_To=${submitedObject.date_to}&date_type=${submitedObject.date_type}`,
+      `http://10.16.145.167:8080/jasperserver/flow.html?_flowId=viewReportFlow&ParentFolderUri=/reports/interactive&reportUnit=/reports/interactive/${submitedObject.reportName}&standAlone=true&decorate=no&j_username=jasperadmin&j_password=jasperadmin&Date_From=${submitedObject.date_from}&Date_To=${submitedObject.date_to}&date_type=${submitedObject.date_type}${temp}${temp1}`,
       "_blank"
     );
   };
+  console.log("subscribeIds",subscribeIds);
   return (
     <ConfigProvider locale={faIR}>
       <div className="mainDiv">
@@ -69,13 +111,10 @@ const ReportGenerator = (props) => {
             onFinish={onFinish}
             initialValues={{
               size: componentSize,
-            //   date_to: "1399/1/1",
-            //   date_from: "1399/1/1",
             }}
             ref={formRef}
             onValuesChange={onFormLayoutChange}
             size={componentSize}
-            //   initialValues={{ report_type: "1" }}
           >
             <Form.Item
               name="report_type"
@@ -102,7 +141,7 @@ const ReportGenerator = (props) => {
               name="reportName"
               label={<p className="ItemLabel">گزارش</p>}
             >
-              <Select dropdownStyle={{ direction: "rtl" }}>
+              <Select dropdownStyle={{ direction: "rtl" }} onSelect={onReportNameselect}>
                 <Select.Option value="1">گزارش مانده بدهی</Select.Option>
                 <Select.Option value="main_jrxml">
                   گزارش وصولی مشترکین
@@ -116,14 +155,56 @@ const ReportGenerator = (props) => {
                 </Select.Option>
               </Select>
             </Form.Item>
+            { paymentFlag && (
             <Form.Item
-              name="subscribeId"
-              label={<p className="ItemLabel">اشتراک</p>}
+              name="paymentType"
+              label={<p className="ItemLabel">نحوه ی وصول</p>}
             >
               <Select
                 dropdownStyle={{ direction: "rtl" }}
-                mode="multiple"
-              ></Select>
+                onFocus={onPaymentMethod}
+                labelInValue
+                allowClear
+              >
+              {
+                paymentType.map(e => 
+                  <Select.Option key={e.value} value={e.key*1}>
+                   {e.label}
+                  </Select.Option>
+                )
+                
+              }
+
+              </Select>
+            </Form.Item>
+            )}
+            <Form.Item
+              name="subscribeId"
+              label={<p className="ItemLabel">اشتراک</p>}
+              // rules={[
+              //   {
+              //     required: true,
+              //     message: ` الزامی است`,
+              //   },
+              // ]}
+            >
+              <Select
+                dropdownStyle={{ direction: "rtl" }}
+                onFocus={onSubscribeFetch}
+                labelInValue
+                allowClear
+                // mode="multiple"
+              >
+              {
+                subscribeIds.map(e => 
+                  <Select.Option key={e.value} value={e.key*1}>
+                   {e.label}
+                  </Select.Option>
+                )
+                
+              }
+
+              </Select>
             </Form.Item>
             {reportType === "1" && (
               <Form.Item
@@ -205,8 +286,8 @@ const ReportGenerator = (props) => {
                       placeholder={"مثال: 01-1399"}
                       style={{ width: "300px" }}
                     />
-                  </Form.Item>{" "}
-                </div>{" "}
+                  </Form.Item>
+                </div>
                 <div style={{ width: "50%" }}>
                   <Form.Item
                     name="date_to"
@@ -227,13 +308,13 @@ const ReportGenerator = (props) => {
                 htmlType="submit"
                 style={{ fontSize: "1.1rem" }}
               >
-                {" "}
+                
                 دریافت گزارش
               </Button>
             </Form.Item>
           </Form>
         </div>
-        <div className="footer"></div>{" "}
+        <div className="footer"></div>
       </div>
     </ConfigProvider>
   );

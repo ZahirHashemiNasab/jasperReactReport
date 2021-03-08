@@ -36,3 +36,8 @@
     transform: rotate(360deg);
   }
 }
+
+.tether-element{
+  z-index: 100;
+  top:60px !important;
+}
