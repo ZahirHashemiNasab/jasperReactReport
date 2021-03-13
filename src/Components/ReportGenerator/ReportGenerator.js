@@ -73,7 +73,7 @@ const ReportGenerator = (props) => {
       if (value.date_type === "1") {
         submitedObject = {
           ...submitedObject,
-          date_from: value.date_from.format("jYYYY/jMM/jD"),
+          date_from: value.date_from.format("jYYYY/jMM/jDD"),
           date_to: value.date_to.format("jYYYY/jMM/jD"),
           date_type: "1",
         };
